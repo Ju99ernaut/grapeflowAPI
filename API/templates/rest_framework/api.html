@@ -1,0 +1,12 @@
+{% extends "rest_framework/base.html" %}
+
+{% block style %}
+    {{ block.super }}
+    <style> .navbar { border-top: 5px solid #433672 } </style>
+{% endblock %}
+
+{% block title %}Pipelines API{% endblock %}
+
+{% block branding %}
+    <span><a href="#" class="navbar-brand">Pipelines API<span class="version">1</span></a></span>
+{% endblock %}
