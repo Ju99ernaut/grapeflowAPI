@@ -1,15 +1,62 @@
 from django.conf.urls import url, include
-from . import views
+from django.urls import path
+from .views import (
+    UserCreate, UserDataViewSet, ProjectViewSet, PageViewSet, AssetViewSet, BlockViewSet, LogicViewSet,
+    OrderViewSet
+)
+
 from rest_framework.routers import DefaultRouter
+from rest_framework.authtoken import views
+
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+app_name = 'main'
 
 router = DefaultRouter()
-router.register(r'userdata', views.UserDataViewSet)
-router.register(r'projects', views.ProjectViewSet)
-router.register(r'pages', views.PageViewSet)
-router.register(r'assets', views.AssetViewSet)
-router.register(r'blocks', views.BlockViewSet)
-router.register(r'logic', views.LogicViewSet)
+router.register(r'orders', OrderViewSet)
+router.register(r'userdata', UserDataViewSet)
+router.register(r'projects', ProjectViewSet)
+router.register(r'pages', PageViewSet)
+router.register(r'assets', AssetViewSet)
+router.register(r'blocks', BlockViewSet)
+router.register(r'logic', LogicViewSet)
+
+schema_view = get_schema_view(
+    openapi.Info(
+        title="Pipelines API",
+        default_version='v1',
+        description="Test description",
+        terms_of_service="https://www.google.com/policies/terms/",
+        contact=openapi.Contact(email="contact@snippets.local"),
+        license=openapi.License(name="MIT License"),
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+)
 
 urlpatterns = [
     url(r'^', include(router.urls)),
+    url(
+        r'^swagger(?P<format>\.json|\.yaml)$',
+        schema_view.without_ui(
+            cache_timeout=0
+        ),
+        name='schema-json'
+    ),
+    url(
+        r'^swagger/$',
+        schema_view.with_ui(
+            'swagger', cache_timeout=0),
+        name='schema-swagger-ui'
+    ),
+    url(
+        r'^redoc/$',
+        schema_view.with_ui(
+            'redoc', cache_timeout=0),
+        name='schema-redoc'
+    ),
+    path('users/', UserCreate.as_view(), name="user_create"),
+    path('login/', views.obtain_auth_token, name="login"),
 ]

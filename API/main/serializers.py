@@ -9,7 +9,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('first_name', 'last_name', 'username', 'email', 'password')
-        extra_kwargs = {'password': {'write-only': True}}
+        extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
         user = User(
@@ -72,7 +72,7 @@ class BlockSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class LogicSerializers(serializers.ModelDurationField):
+class LogicSerializer(serializers.ModelSerializer):
     project = ProjectSerializer(many=True, required=True)
 
     class Meta:

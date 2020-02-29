@@ -143,6 +143,7 @@ class Logic(models.Model):
 
     class Meta:
         ordering = ['created']
+        verbose_name_plural = 'Logic'
 
     def __str__(self):
         return self.name
