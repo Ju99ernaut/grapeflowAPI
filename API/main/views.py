@@ -5,9 +5,11 @@ from .serializers import (
     UserSerializer, OrderSerializer, UserDataSerializer, ProjectSerializer, PageSerializer,
     AssetSerializer, BlockSerializer, LogicSerializer
 )
-from rest_framework import generics, viewsets, status
+from rest_framework.parsers import FileUploadParser
+from rest_framework import views, generics, viewsets, status
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
+from datetime import datetime
 
 
 class UserCreate(generics.CreateAPIView):
@@ -41,8 +43,9 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
         query_set = queryset.filter(user=self.request.user)
         return query_set
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+    # def perform_create(self, serializer):
+    #    if self.request.user:
+    #        serializer.save(user=self.request.user)
 
     def retrieve(self, request, *args, **kwargs):
         """
@@ -56,7 +59,7 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
 
 class UserDataViewSet(viewsets.ModelViewSet):
     """
-    Creates and returns user data instance given valid data
+    List, create and return user data given valid data
     """
     queryset = UserData.objects.all()
     serializer_class = UserDataSerializer
@@ -70,7 +73,8 @@ class UserDataViewSet(viewsets.ModelViewSet):
         return query_set
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        if self.request.user:
+            serializer.save(user=self.request.user)
 
     def retrieve(self, request, *args, **kwargs):
         """
@@ -108,7 +112,7 @@ class UserDataViewSet(viewsets.ModelViewSet):
 
 class ProjectViewSet(viewsets.ModelViewSet):
     """
-    Creates and returns project instance given valid data
+    List, create and return projects given valid data
     """
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
@@ -122,7 +126,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return query_set
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        if self.request.user:
+            serializer.save(user=self.request.user)
 
     def retrieve(self, request, *args, **kwargs):
         """
@@ -163,28 +168,38 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
 class PageViewSet(viewsets.ModelViewSet):
     """
-    Creates and returns page instance given valid data
+    List, create and return pages given valid data
     """
     queryset = Page.objects.all()
     serializer_class = PageSerializer
 
-    def get_queryset(self):
+    def get_queryset(self, *args, **kwargs):
         """
         List the pages in a given project 
         """
         queryset = self.queryset
-        query_set = queryset.filter(project__user=self.request.user)
-        return query_set
+        query_set = queryset.filter(
+            project__user=self.request.user)
+        # todo groupby project
+        try:
+            return query_set.filter(project=self.kwargs["project"])
+        except KeyError:
+            return query_set
 
-    # def perform_create(self, serializer):
-    #    serializer.save(user=self.request.user)
+    def perform_create(self, serializer, *args, **kwargs):
+        try:
+            serializer.save(
+                project=Project.objects.get(uuid=self.kwargs["project"])
+            )
+        except KeyError:
+            raise PermissionDenied("Unable to create page without project")
 
     def retrieve(self, request, *args, **kwargs):
         """
         Returns detailed view of a page instance
         """
         page = Page.objects.get(pk=self.kwargs["pk"])
-        if not request.user == page.project__user:
+        if not request.user == page.getUser():
             raise PermissionDenied("You can not access this project.")
         return super().retrieve(request, *args, **kwargs)
 
@@ -193,7 +208,7 @@ class PageViewSet(viewsets.ModelViewSet):
         Update and return updated page instance given valid data
         """
         page = Page.objects.get(pk=self.kwargs["pk"])
-        if not request.user == page.project__user:
+        if not request.user == page.getUser():
             raise PermissionDenied("You can not access this project.")
         return super().update(request, *args, **kwargs)
 
@@ -202,7 +217,7 @@ class PageViewSet(viewsets.ModelViewSet):
         Partially update a page instance
         """
         page = Page.objects.get(pk=self.kwargs["pk"])
-        if not request.user == page.project__user:
+        if not request.user == page.getUser():
             raise PermissionDenied("You can not access this project.")
         return super().partial_update(request, *args, **kwargs)
 
@@ -211,69 +226,35 @@ class PageViewSet(viewsets.ModelViewSet):
         Destroy/Delete a page instance
         """
         page = Page.objects.get(pk=self.kwargs["pk"])
-        if not request.user == page.project__user:
+        if not request.user == page.getUser():
             raise PermissionDenied("You can not delete this project.")
         return super().destroy(request, *args, **kwargs)
 
 
-class AssetViewSet(viewsets.ModelViewSet):
+class AssetView(views.APIView):
     """
-    Creates and returns asset instance given valid data
+    Upload asset files
     """
-    queryset = Asset.objects.all()
-    serializer_class = AssetSerializer
+    parser_class = (FileUploadParser,)
 
-    def get_queryset(self):
-        """
-        List assets in a given project
-        """
-        queryset = self.queryset
-        query_set = queryset.filter(user=self.request.user)
-        return query_set
+    def post(self, request, *args, **kwargs):
+        if request.user:
+            asset_serializer = AssetSerializer(data=request.data)
+            if asset_serializer.is_valid():
+                asset_serializer.save(user=request.user)
+                return Response(asset_serializer.data, status=status.HTTP_201_CREATED)
+            return Response(asset_serializer.data, status=status.HTTP_400_BAD_REQUEST)
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-    def retrieve(self, request, *args, **kwargs):
-        """
-        Returns detailed view of an asset instance
-        """
-        asset = Asset.objects.get(pk=self.kwargs["pk"])
-        if not request.user == asset.user:
-            raise PermissionDenied("You can not access this asset.")
-        return super().retrieve(request, *args, **kwargs)
-
-    def update(self, request, *args, **kwargs):
-        """
-        Update and return updated asset instance given valid data
-        """
-        asset = Asset.objects.get(pk=self.kwargs["pk"])
-        if not request.user == asset.user:
-            raise PermissionDenied("You can not access this asset.")
-        return super().update(request, *args, **kwargs)
-
-    def partial_update(self, request, *args, **kwargs):
-        """
-        Partially update an asset instance
-        """
-        asset = Asset.objects.get(pk=self.kwargs["pk"])
-        if not request.user == asset.user:
-            raise PermissionDenied("You can not access this asset.")
-        return super().partial_update(request, *args, **kwargs)
-
-    def destroy(self, request, *args, **kwargs):
-        """
-        Destroy/Delete an asset instance
-        """
-        asset = Asset.objects.get(pk=self.kwargs["pk"])
-        if not request.user == asset.user:
-            raise PermissionDenied("You can not delete this asset.")
-        return super().destroy(request, *args, **kwargs)
+    def get(self, request, *args, **kwargs):
+        if request.user:
+            assets = Asset.objects.filter(user=request.user)
+            asset_serializer = AssetSerializer(assets, many=True)
+            return Response(asset_serializer.data)
 
 
 class BlockViewSet(viewsets.ModelViewSet):
     """
-    Creates and returns block instance given valid data
+    List, create and return blocks given valid data
     """
     queryset = Block.objects.all()
     serializer_class = BlockSerializer
@@ -283,18 +264,19 @@ class BlockViewSet(viewsets.ModelViewSet):
         List all custom blocks in a given project
         """
         queryset = self.queryset
-        query_set = queryset.filter(project__user=self.request.user)
+        query_set = queryset.filter(user=self.request.user)
         return query_set
 
-    # def perform_create(self, serializer):
-    #    serializer.save(user=self.request.user)
+    def perform_create(self, serializer):
+        if self.request.user:
+            serializer.save(user=self.request.user)
 
     def retrieve(self, request, *args, **kwargs):
         """
         Returns detailed view of a block instance
         """
         block = Block.objects.get(pk=self.kwargs["pk"])
-        if not request.user == block.project__user:
+        if not request.user == block.user:
             raise PermissionDenied("You can not access this block.")
         return super().retrieve(request, *args, **kwargs)
 
@@ -303,7 +285,7 @@ class BlockViewSet(viewsets.ModelViewSet):
         Update and return updated block instance given valid data
         """
         block = Block.objects.get(pk=self.kwargs["pk"])
-        if not request.user == block.project__user:
+        if not request.user == block.user:
             raise PermissionDenied("You can not access this block.")
         return super().update(request, *args, **kwargs)
 
@@ -312,7 +294,7 @@ class BlockViewSet(viewsets.ModelViewSet):
         Partially update an block instance
         """
         block = Block.objects.get(pk=self.kwargs["pk"])
-        if not request.user == block.project__user:
+        if not request.user == block.user:
             raise PermissionDenied("You can not access this block.")
         return super().partial_update(request, *args, **kwargs)
 
@@ -321,14 +303,14 @@ class BlockViewSet(viewsets.ModelViewSet):
         Destroy/Delete a block instance
         """
         block = Block.objects.get(pk=self.kwargs["pk"])
-        if not request.user == block.project__user:
+        if not request.user == block.user:
             raise PermissionDenied("You can not delete this block.")
         return super().destroy(request, *args, **kwargs)
 
 
 class LogicViewSet(viewsets.ModelViewSet):
     """
-    Creates and returns logic instance given valid data
+    List, create and return logic given valid data
     """
     queryset = Logic.objects.all()
     serializer_class = LogicSerializer
@@ -338,18 +320,19 @@ class LogicViewSet(viewsets.ModelViewSet):
         List all custom logic in a given project
         """
         queryset = self.queryset
-        query_set = queryset.filter(project__user=self.request.user)
+        query_set = queryset.filter(user=self.request.user)
         return query_set
 
-    # def perform_create(self, serializer):
-    #    serializer.save(user=self.request.user)
+    def perform_create(self, serializer):
+        if self.request.user:
+            serializer.save(user=self.request.user)
 
     def retrieve(self, request, *args, **kwargs):
         """
         Returns detailed view of a logic instance
         """
         logic = Logic.objects.get(pk=self.kwargs["pk"])
-        if not request.user == logic.project__user:
+        if not request.user == logic.user:
             raise PermissionDenied("You can not access this logic.")
         return super().retrieve(request, *args, **kwargs)
 
@@ -358,7 +341,7 @@ class LogicViewSet(viewsets.ModelViewSet):
         Update and return updated logic instance given valid data
         """
         logic = Logic.objects.get(pk=self.kwargs["pk"])
-        if not request.user == logic.project__user:
+        if not request.user == logic.user:
             raise PermissionDenied("You can not access this logic.")
         return super().update(request, *args, **kwargs)
 
@@ -367,7 +350,7 @@ class LogicViewSet(viewsets.ModelViewSet):
         Partially update a logic instance
         """
         logic = Logic.objects.get(pk=self.kwargs["pk"])
-        if not request.user == logic.project__user:
+        if not request.user == logic.user:
             raise PermissionDenied("You can not access this logic.")
         return super().partial_update(request, *args, **kwargs)
 
@@ -376,6 +359,6 @@ class LogicViewSet(viewsets.ModelViewSet):
         Destroy/Delete a logic instance
         """
         logic = Logic.objects.get(pk=self.kwargs["pk"])
-        if not request.user == logic.project__user:
+        if not request.user == logic.user:
             raise PermissionDenied("You can not delete this logic.")
         return super().destroy(request, *args, **kwargs)

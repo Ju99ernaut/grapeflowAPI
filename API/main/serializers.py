@@ -25,56 +25,63 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    user = UserSerializer(many=True, required=True)
+    #user = UserSerializer(many=True, required=True)
 
     class Meta:
         model = Order
         fields = '__all__'
+        read_only_fields = ['user']
 
 
 class UserDataSerializer(serializers.ModelSerializer):
-    user = UserSerializer(many=True, required=True)
+    #user = UserSerializer(many=True, required=True)
 
     class Meta:
         model = UserData
         fields = '__all__'
+        read_only_fields = ['user']
 
 
 class ProjectSerializer(serializers.ModelSerializer):
-    user = UserSerializer(many=True, required=True)
+    #user = UserSerializer(many=True, required=True)
 
     class Meta:
         model = Project
         fields = '__all__'
+        read_only_fields = ['user', 'published']
 
 
 class PageSerializer(serializers.ModelSerializer):
-    project = ProjectSerializer(many=True, required=True)
+    #project = ProjectSerializer(many=True, required=True)
 
     class Meta:
         model = Page
         fields = '__all__'
+        read_only_fields = ['project']
 
 
 class AssetSerializer(serializers.ModelSerializer):
-    user = UserSerializer(many=True, required=True)
+    #user = UserSerializer(many=True, required=True)
 
     class Meta:
         model = Asset
         fields = '__all__'
+        read_only_fields = ['user']
 
 
 class BlockSerializer(serializers.ModelSerializer):
-    project = ProjectSerializer(many=True, required=True)
+    #project = ProjectSerializer(many=True, required=True)
 
     class Meta:
         model = Block
         fields = '__all__'
+        read_only_fields = ['user']
 
 
 class LogicSerializer(serializers.ModelSerializer):
-    project = ProjectSerializer(many=True, required=True)
+    #project = ProjectSerializer(many=True, required=True)
 
     class Meta:
         model = Logic
         fields = '__all__'
+        read_only_fields = ['user']
