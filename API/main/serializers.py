@@ -3,6 +3,7 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 # , PLAN_CHOICES, ASSET_TYPE_CHOICES
 from .models import Order, UserData, Project, Page, Asset, Block, Logic
+from drf_extra_fields.fields import Base64ImageField
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -71,6 +72,7 @@ class AssetSerializer(serializers.ModelSerializer):
 
 class BlockSerializer(serializers.ModelSerializer):
     #project = ProjectSerializer(many=True, required=True)
+    preview = Base64ImageField()
 
     class Meta:
         model = Block

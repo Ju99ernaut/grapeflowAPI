@@ -18,7 +18,7 @@ from django.urls import path, include
 from rest_framework.documentation import include_docs_urls
 
 urlpatterns = [
-    path('', include('main.urls')),
+    path('api/', include('main.urls')),
     path('admin/', admin.site.urls),
     path(r'docs/', include_docs_urls(title='Pipelines API Docs')),
 ]

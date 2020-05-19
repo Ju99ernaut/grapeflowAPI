@@ -19,11 +19,23 @@ app_name = 'main'
 router = DefaultRouter()
 router.register(r'orders', OrderViewSet)
 router.register(r'userdata', UserDataViewSet)
-router.register(r'projects', ProjectViewSet)
+#router.register(r'projects', ProjectViewSet)
 #router.register(r'pages', PageViewSet)
 #router.register(r'assets', AssetViewSet)
 router.register(r'blocks', BlockViewSet)
 router.register(r'logic', LogicViewSet)
+
+project_list = ProjectViewSet.as_view({
+    'get': 'list',
+    'post': 'create'
+})
+
+project_detail = ProjectViewSet.as_view({
+    'get': 'retrieve',
+    'post': 'update',  # ? put method used initially
+    'patch': 'partial_update',
+    'delete': 'destroy',
+})
 
 page_list = PageViewSet.as_view({
     'get': 'list',
@@ -80,8 +92,10 @@ urlpatterns = [
     path('users/', UserCreate.as_view(), name="user_create"),
     path('login/', views.obtain_auth_token, name="login"),
     path('order/', OrderCreate.as_view(), name="order_create"),
-    path('pages/<uuid:project>', page_list, name='page-list'),
-    path('page/<uuid:pk>/', page_detail, name='page-detail'),
+    path('pages/<uuid:project>/', page_list, name="page-list"),
+    path('page/<uuid:pk>/', page_detail, name="page-detail"),
+    path('projects/', project_list, name="project-list"),
+    path('projects/<uuid:pk>/', project_detail, name="project-detail"),
     path('assets/', AssetView.as_view(), name="asset-upload"),
 ]
 
