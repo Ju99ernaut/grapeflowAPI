@@ -1,10 +1,8 @@
 from django.conf.urls import url, include
 from django.urls import path
-from django.conf import settings
-from django.conf.urls.static import static
 from .views import (
-    UserCreate, UserDataViewSet, ProjectViewSet, PageViewSet, AssetView, BlockViewSet, LogicViewSet,
-    OrderCreate, OrderViewSet
+    UserCreate, UserLogin, UserUpdate, ChangePassword, UserDataViewSet, ProjectViewSet, PageViewSet,
+    AssetView, BlockViewSet, LogicViewSet, OrderViewSet
 )
 
 from rest_framework.routers import DefaultRouter
@@ -89,16 +87,13 @@ urlpatterns = [
             'redoc', cache_timeout=0),
         name='schema-redoc'
     ),
-    path('users/', UserCreate.as_view(), name="user_create"),
-    path('login/', views.obtain_auth_token, name="login"),
-    path('order/', OrderCreate.as_view(), name="order_create"),
+    path('register/', UserCreate.as_view(), name="register"),
+    path('login/', UserLogin.as_view(), name="login"),
+    path('users/update/', UserUpdate.as_view(), name="user-update"),
+    path('users/password/', ChangePassword.as_view(), name="change-password"),
     path('pages/<uuid:project>/', page_list, name="page-list"),
     path('page/<uuid:pk>/', page_detail, name="page-detail"),
     path('projects/', project_list, name="project-list"),
     path('projects/<uuid:pk>/', project_detail, name="project-detail"),
     path('assets/', AssetView.as_view(), name="asset-upload"),
 ]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL,
-                          document_root=settings.MEDIA_ROOT)

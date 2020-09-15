@@ -1,15 +1,15 @@
 #from django.shortcuts import render
 from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
 from .models import Order, UserData, Project, Page, Asset, Block, Logic
 from .serializers import (
-    UserSerializer, OrderSerializer, UserDataSerializer, ProjectSerializer, PageSerializer,
-    AssetSerializer, BlockSerializer, LogicSerializer
+    UserCreateSerializer, UserUpdateSerializer, OrderSerializer, UserDataSerializer, ProjectSerializer, PageSerializer,
+    AssetSerializer, BlockSerializer, LogicSerializer, ChangePasswordSerializer
 )
 from rest_framework.parsers import FileUploadParser
 from rest_framework import views, generics, viewsets, status
 from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
-from datetime import datetime
 
 
 class UserCreate(generics.CreateAPIView):
@@ -18,17 +18,57 @@ class UserCreate(generics.CreateAPIView):
     """
     authentication_classes = ()
     permission_classes = ()
-    serializer_class = UserSerializer
+    serializer_class = UserCreateSerializer
 
 
-class OrderCreate(generics.CreateAPIView):
+class UserLogin(views.APIView):
     """
-    Create and return new order instance given valid data
+    Endpoint for logging in users
     """
-    serializer_class = OrderSerializer
+    permission_classes = ()
+
+    def post(self, request):
+        username = request.data.get("username")
+        password = request.data.get("password")
+        # todo start the session for session authentication
+        user = authenticate(username=username, password=password)
+        if user:
+            if hasattr(user, 'user_data'):
+                uuid = user.user_data.uuid
+            else:
+                uuid = ""
+            return Response({
+                "user": UserCreateSerializer(user).data,
+                "id": user.id,
+                "userDataUuid": uuid,
+                "token": user.auth_token.key
+            })
+        else:
+            return Response({"error": "Wrong Credentials"}, status=status.HTTP_400_BAD_REQUEST)
 
 
-class OrderViewSet(viewsets.ReadOnlyModelViewSet):
+class UserUpdate(generics.UpdateAPIView):
+    """
+    An endpoint for updating user information
+    """
+    queryset = User.objects.all()
+    serializer_class = UserUpdateSerializer
+
+    def get_object(self):
+        """
+        Get the authenticated user
+        """
+        return self.request.user
+
+
+class ChangePassword(generics.UpdateAPIView):
+    """
+    An endpoint for changing password
+    """
+    serializer_class = ChangePasswordSerializer
+
+
+class OrderViewSet(viewsets.ModelViewSet):
     """
     List the authenticated user's orders
     """
@@ -43,9 +83,9 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
         query_set = queryset.filter(user=self.request.user)
         return query_set
 
-    # def perform_create(self, serializer):
-    #    if self.request.user:
-    #        serializer.save(user=self.request.user)
+    def perform_create(self, serializer):
+        if self.request.user:
+            serializer.save(user=self.request.user)
 
     def retrieve(self, request, *args, **kwargs):
         """
@@ -53,8 +93,26 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
         """
         order = Order.objects.get(pk=self.kwargs["pk"])
         if not request.user == order.user:
-            raise PermissionDenied("You can not access this project.")
+            raise PermissionDenied("You can not access this object.")
         return super().retrieve(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        """
+        Update not available
+        """
+        pass
+
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Partially update not available
+        """
+        pass
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        Delete not available
+        """
+        pass
 
 
 class UserDataViewSet(viewsets.ModelViewSet):
@@ -82,7 +140,7 @@ class UserDataViewSet(viewsets.ModelViewSet):
         """
         user_data = UserData.objects.get(pk=self.kwargs["pk"])
         if not request.user == user_data.user:
-            raise PermissionDenied("You can not access this project.")
+            raise PermissionDenied("You can not access this object.")
         return super().retrieve(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
@@ -91,7 +149,7 @@ class UserDataViewSet(viewsets.ModelViewSet):
         """
         user_data = UserData.objects.get(pk=self.kwargs["pk"])
         if not request.user == user_data.user:
-            raise PermissionDenied("You can not access this project.")
+            raise PermissionDenied("You can not access this object.")
         return super().update(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
@@ -100,12 +158,12 @@ class UserDataViewSet(viewsets.ModelViewSet):
         """
         user_data = UserData.objects.get(pk=self.kwargs["pk"])
         if not request.user == user_data.user:
-            raise PermissionDenied("You can not access this project.")
+            raise PermissionDenied("You can not access this object.")
         return super().partial_update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
         """
-        Not available
+        Delete not available
         """
         pass
 
@@ -200,7 +258,7 @@ class PageViewSet(viewsets.ModelViewSet):
         """
         page = Page.objects.get(pk=self.kwargs["pk"])
         if not request.user == page.getUser():
-            raise PermissionDenied("You can not access this project.")
+            raise PermissionDenied("You can not access this page.")
         return super().retrieve(request, *args, **kwargs)
 
     def update(self, request, *args, **kwargs):
@@ -209,7 +267,7 @@ class PageViewSet(viewsets.ModelViewSet):
         """
         page = Page.objects.get(pk=self.kwargs["pk"])
         if not request.user == page.getUser():
-            raise PermissionDenied("You can not access this project.")
+            raise PermissionDenied("You can not access this page.")
         return super().update(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
@@ -218,7 +276,7 @@ class PageViewSet(viewsets.ModelViewSet):
         """
         page = Page.objects.get(pk=self.kwargs["pk"])
         if not request.user == page.getUser():
-            raise PermissionDenied("You can not access this project.")
+            raise PermissionDenied("You can not access this page.")
         return super().partial_update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
@@ -227,7 +285,7 @@ class PageViewSet(viewsets.ModelViewSet):
         """
         page = Page.objects.get(pk=self.kwargs["pk"])
         if not request.user == page.getUser():
-            raise PermissionDenied("You can not delete this project.")
+            raise PermissionDenied("You can not delete this page.")
         return super().destroy(request, *args, **kwargs)
 
 
